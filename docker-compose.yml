@@ -1,38 +1,38 @@
-# Docker Compose file for Open WebUI
+# Docker Compose file for Open WebUI and Portainer
 # Version specifies the file format. '3.8' is a recent, stable version.
 version: '3.8'
 
 services:
   # Defines the Open WebUI service
   open-webui:
-    # The official Docker image for Open WebUI.
-    # Using ':main' pulls the latest version from the main branch.
     image: ghcr.io/open-webui/open-webui:main
-    
-    # A friendly name for the container for easier management.
     container_name: open-webui
-    
-    # Mounts a named volume to persist Open WebUI's data.
-    # This ensures your settings and chat history are saved even if the container is removed.
     volumes:
       - open-webui:/app/backend/data
-      
-    # Maps port 3000 on your host machine to port 8080 in the container.
-    # You will access the web UI via http://localhost:3000.
     ports:
+      # Access Open WebUI at http://localhost:3000
       - "3000:8080"
-      
-    # This is the crucial part for connecting to Ollama on your host machine.
-    # 'host.docker.internal' is a special DNS name that resolves to the host's IP address.
-    # This allows the container to find the Ollama server running on your local machine.
     extra_hosts:
       - "host.docker.internal:host-gateway"
-      
-    # Sets the restart policy. 'unless-stopped' ensures the container
-    # automatically restarts if it crashes, but not if you manually stop it.
     restart: unless-stopped
 
-# Defines the named volume used by the service.
-# This allows Docker to manage the volume's lifecycle.
+  # Defines the Portainer service for Docker management
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      # Portainer UI will be available on port 9443 (HTTPS)
+      - "9443:9443"
+      # Port 8000 is used for the tunnel server (optional but recommended)
+      - "8000:8000"
+    volumes:
+      # Mounts the Docker socket to allow Portainer to manage Docker itself.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persists Portainer's configuration data.
+      - portainer_data:/data
+    restart: always
+
+# Defines the named volumes used by the services.
 volumes:
   open-webui: {}
+  portainer_data: {}
