@@ -26,6 +26,7 @@ services:
     image: ollama/ollama:rocm
     container_name: ollama
     environment:
+      - "AMD_LOG_LEVEL=3"
       - "HSA_OVERRIDE_GFX_VERSION=gfx1030"
       - "OLLAMA_DEBUG=1"
     # Maps host GPU devices to the container for hardware acceleration.
