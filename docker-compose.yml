@@ -1,46 +1,51 @@
-# Docker Compose file for Open WebUI, Ollama, and Portainer
-# Version specifies the file format. '3.8' is a recent, stable version.
 version: '3.8'
 
 services:
-  # Defines the Open WebUI service
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
-    # Depends on the ollama service to ensure it starts first.
     depends_on:
       - ollama
+      - searxng
     ports:
-      # Exposes Open WebUI on port 3000 of the host machine.
       - "3000:8080"
     environment:
-      # Explicitly tells Open WebUI where to find the Ollama API.
-      # 'ollama' is the service name of the Ollama container.
       - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'ENABLE_WEB_SEARCH=True'
+      - 'SEARXNG_URL=http://searxng:8080'
     volumes:
       - open-webui:/app/backend/data
     restart: unless-stopped
 
-  # Defines the Ollama service, translated from your 'docker run' command.
   ollama:
     image: ollama/ollama:rocm
     container_name: ollama
     environment:
-      - "AMD_LOG_LEVEL=3"
       - "HSA_OVERRIDE_GFX_VERSION=gfx1030"
       - "OLLAMA_DEBUG=1"
-    # Maps host GPU devices to the container for hardware acceleration.
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     volumes:
-      # Using a named volume to persist Ollama models and data.
       - ollama_data:/root/.ollama
     ports:
       - "11434:11434"
     restart: unless-stopped
+  
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    ports:
+      - "8888:8080"
+    volumes:
+      - searxng_data:/etc/searxng
+    environment:
+      - "SEARXNG_BASE_URL=http://localhost:8888/"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
 
-  # Defines the Portainer service for Docker management
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
@@ -52,8 +57,8 @@ services:
       - portainer_data:/data
     restart: always
 
-# Defines the named volumes used by the services for persistent data.
 volumes:
   open-webui: {}
   ollama_data: {}
+  searxng_data: {}
   portainer_data: {}
