@@ -7,13 +7,17 @@ services:
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
+    # Use host networking to allow the container to directly access
+    # services running on the host machine, like Ollama.
+    network_mode: "host"
     volumes:
       - open-webui:/app/backend/data
-    ports:
-      # Access Open WebUI at http://localhost:3000
-      - "3000:8080"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    environment:
+      # Sets the internal port for the Open WebUI application.
+      # Since we are using host networking, this is the port that will be used on the host.
+      - 'PORT=3001'
+    # When using 'network_mode: "host"', the container's port is exposed directly on the host.
+    # Open WebUI will now be accessible on the port defined above: http://localhost:3001
     restart: unless-stopped
 
   # Defines the Portainer service for Docker management
