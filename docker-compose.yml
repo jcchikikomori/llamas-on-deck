@@ -1,4 +1,4 @@
-# Docker Compose file for Open WebUI and Portainer
+# Docker Compose file for Open WebUI, Ollama, and Portainer
 # Version specifies the file format. '3.8' is a recent, stable version.
 version: '3.8'
 
@@ -7,17 +7,36 @@ services:
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
-    # Use host networking to allow the container to directly access
-    # services running on the host machine, like Ollama.
-    network_mode: "host"
+    # Depends on the ollama service to ensure it starts first.
+    depends_on:
+      - ollama
+    ports:
+      # Exposes Open WebUI on port 3000 of the host machine.
+      - "3000:8080"
+    environment:
+      # Explicitly tells Open WebUI where to find the Ollama API.
+      # 'ollama' is the service name of the Ollama container.
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
     volumes:
       - open-webui:/app/backend/data
+    restart: unless-stopped
+
+  # Defines the Ollama service, translated from your 'docker run' command.
+  ollama:
+    image: ollama/ollama:rocm
+    container_name: ollama
     environment:
-      # Sets the internal port for the Open WebUI application.
-      # Since we are using host networking, this is the port that will be used on the host.
-      - 'PORT=3001'
-    # When using 'network_mode: "host"', the container's port is exposed directly on the host.
-    # Open WebUI will now be accessible on the port defined above: http://localhost:3001
+      - "HSA_OVERRIDE_GFX_VERSION=gfx1030"
+      - "OLLAMA_DEBUG=1"
+    # Maps host GPU devices to the container for hardware acceleration.
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    volumes:
+      # Using a named volume to persist Ollama models and data.
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
     restart: unless-stopped
 
   # Defines the Portainer service for Docker management
@@ -25,18 +44,15 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     ports:
-      # Portainer UI will be available on port 9443 (HTTPS)
       - "9443:9443"
-      # Port 8000 is used for the tunnel server (optional but recommended)
       - "8000:8000"
     volumes:
-      # Mounts the Docker socket to allow Portainer to manage Docker itself.
       - /var/run/docker.sock:/var/run/docker.sock
-      # Persists Portainer's configuration data.
       - portainer_data:/data
     restart: always
 
-# Defines the named volumes used by the services.
+# Defines the named volumes used by the services for persistent data.
 volumes:
   open-webui: {}
+  ollama_data: {}
   portainer_data: {}
