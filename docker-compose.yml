@@ -13,6 +13,11 @@ services:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'ENABLE_WEB_SEARCH=True'
       - 'SEARXNG_URL=http://searxng:8080'
+      - 'ENABLE_RAG_WEB_SEARCH: True'
+      - 'RAG_WEB_SEARCH_ENGINE: "searxng"'
+      - 'RAG_WEB_SEARCH_RESULT_COUNT: 3'
+      - 'RAG_WEB_SEARCH_CONCURRENT_REQUESTS: 10'
+      - 'SEARXNG_QUERY_URL: "http://searxng:8080/search?q=<query>"'
     volumes:
       - open-webui:/app/backend/data
     restart: unless-stopped
@@ -38,13 +43,22 @@ services:
     ports:
       - "8888:8080"
     volumes:
-      - searxng_data:/etc/searxng
-    environment:
-      - "SEARXNG_BASE_URL=http://localhost:8888/"
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
+      - searxng_data:/etc/searxng:rw
+    env_file:
+      - .env
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 
   portainer:
     image: portainer/portainer-ce:latest
@@ -54,6 +68,7 @@ services:
       - "8000:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /run/user/1000/docker.sock:/var/run/docker-rootless.sock
       - portainer_data:/data
     restart: always
 
